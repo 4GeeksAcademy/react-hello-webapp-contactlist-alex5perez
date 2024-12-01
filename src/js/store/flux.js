@@ -1,43 +1,76 @@
 const getState = ({ getStore, getActions, setStore }) => {
 	return {
 		store: {
-			demo: [
-				{
-					title: "FIRST",
-					background: "white",
-					initial: "white"
-				},
-				{
-					title: "SECOND",
-					background: "white",
-					initial: "white"
-				}
-			]
+			contacts: []
 		},
 		actions: {
-			// Use getActions to call a function within a fuction
-			exampleFunction: () => {
-				getActions().changeColor(0, "green");
+			loadContacts: () => {
+				fetch("https://playground.4geeks.com/contact/agendas/alex5perez")
+					.then(response => {
+						if (response.ok) {
+							return response.json();
+						} else if (response.status === 404) {
+							return getActions().createAgenda().then(() => getActions().loadContacts());
+						}
+					})
+					.then(data => {
+						if (data && data.contacts) {
+							setStore({ contacts: data.contacts });
+						}
+					})
+					.catch(err => err);
 			},
-			loadSomeData: () => {
-				/**
-					fetch().then().then(data => setStore({ "foo": data.bar }))
-				*/
-			},
-			changeColor: (index, color) => {
-				//get the store
-				const store = getStore();
 
-				//we have to loop the entire demo array to look for the respective index
-				//and change its color
-				const demo = store.demo.map((elm, i) => {
-					if (i === index) elm.background = color;
-					return elm;
+			createAgenda: () => {
+				return fetch("https://playground.4geeks.com/contact/agendas/alex5perez", {
+					method: "POST",
+					body: JSON.stringify([]),
+					headers: { "Content-Type": "application/json" }
+				}).catch(err => err);
+			},
+
+			createContact: (contactData) => {
+				fetch("https://playground.4geeks.com/contact/agendas/alex5perez/contacts", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(contactData)
+				})
+					.then(response => response.json())
+					.then(data => {
+						const store = getStore();
+						setStore({ contacts: [...store.contacts, data] });
+					})
+					.catch(err => console.error(err));
+			},
+
+			editContact: (id, contactData) => {
+				fetch(`https://playground.4geeks.com/contact/agendas/alex5perez/contacts/${id}`, {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(contactData)
+				})
+					.then(() => getActions().loadContacts())
+					.catch(err => console.error(err));
+			},
+
+			handleChange: (e, currentData, setData) => {
+				setData({
+					...currentData,
+					[e.target.id]: e.target.value
 				});
+			},
 
-				//reset the global store
-				setStore({ demo: demo });
-			}
+			deleteContact: (id) => {
+				fetch(`https://playground.4geeks.com/contact/agendas/alex5perez/contacts/${id}`, {
+					method: "DELETE",
+					headers: { "Content-Type": "application/json" }
+				})
+					.then(() => {
+						const store = getStore();
+						setStore({ contacts: store.contacts.filter(contact => contact.id !== id) });
+					})
+					.catch(err => console.error(err));
+			},
 		}
 	};
 };
